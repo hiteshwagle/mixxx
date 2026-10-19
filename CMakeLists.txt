@@ -1200,6 +1200,8 @@ add_library(
   mixxx-lib
   STATIC
   EXCLUDE_FROM_ALL
+  src/agent/agentbridge.cpp
+  src/agent/agentplayer.cpp
   src/analyzer/analyzerbeats.cpp
   src/analyzer/analyzerebur128.cpp
   src/analyzer/analyzergain.cpp
@@ -1497,7 +1499,6 @@ add_library(
   src/library/searchqueryparser.cpp
   src/library/serato/seratofeature.cpp
   src/library/serato/seratoplaylistmodel.cpp
-  src/library/sidebarmodel.cpp
   src/library/starrating.cpp
   src/library/tabledelegates/bpmdelegate.cpp
   src/library/tabledelegates/checkboxdelegate.cpp
@@ -2498,6 +2499,7 @@ if(NOT QML)
       # main target
       src/control/controlmodel.cpp
       src/control/controlsortfiltermodel.cpp
+      src/library/sidebarmodel.cpp
   )
 else()
   target_sources(
@@ -2988,6 +2990,7 @@ if(BUILD_TESTING)
     src/test/librarytest.cpp
     src/test/looping_control_test.cpp
     src/test/main.cpp
+    src/test/agentbridge_test.cpp
     src/test/mathutiltest.cpp
     src/test/matrixapitest.cpp
     src/test/metadatatest.cpp
@@ -4108,6 +4111,7 @@ if(QML)
       # The following sources need to be in this target to get QML_ELEMENT properly interpreted
       src/control/controlmodel.cpp
       src/control/controlsortfiltermodel.cpp
+      src/library/sidebarmodel.cpp
       # needed for qml/qmlautoreload.cpp
       src/util/autofilereloader.cpp
   )

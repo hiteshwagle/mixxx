@@ -29,6 +29,7 @@ namespace mixxx {
 class ControlIndicatorTimer;
 class DbConnectionPool;
 class ScreensaverManager;
+class AgentBridge;
 
 class CoreServices : public QObject {
     Q_OBJECT
@@ -146,6 +147,7 @@ class CoreServices : public QObject {
     std::shared_ptr<mixxx::ScreensaverManager> m_pScreensaverManager;
 
     std::unique_ptr<SkinControls> m_pSkinControls;
+    std::unique_ptr<AgentBridge> m_pAgentBridge;
     std::unique_ptr<ControlPushButton> m_pTouchShift;
 
     Timer m_runtime_timer;

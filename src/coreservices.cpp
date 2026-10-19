@@ -8,6 +8,8 @@
 #include <QtGlobal>
 #include <gsl/pointers>
 
+#include "agent/agentbridge.h"
+
 #ifdef __BROADCAST__
 #include "broadcast/broadcastmanager.h"
 #endif
@@ -791,6 +793,19 @@ void CoreServices::initialize(QApplication* pApp) {
         }
     }
 
+    if (!m_cmdlineArgs.getAgentBridgeConfig().isEmpty()) {
+        QString error;
+        const auto bridgeConfig = AgentBridgeConfig::fromFile(
+                m_cmdlineArgs.getAgentBridgeConfig(), &error);
+        if (bridgeConfig) {
+            m_pAgentBridge = std::make_unique<AgentBridge>(*bridgeConfig,
+                    std::make_unique<MixxxAgentPlayer>(m_pPlayerManager.get()));
+            m_pAgentBridge->start();
+        } else {
+            qWarning() << "Agent bridge disabled:" << error;
+        }
+    }
+
     m_isInitialized = true;
 
     ControllerScriptEngineBase::registerPlayerManager(getPlayerManager());
@@ -909,6 +924,8 @@ void CoreServices::finalize() {
         qDebug() << "Skipping CoreServices finalization because it was never initialized.";
         return;
     }
+
+    m_pAgentBridge.reset();
 
     Timer t("CoreServices::~CoreServices");
     t.start();

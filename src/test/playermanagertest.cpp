@@ -1,8 +1,11 @@
 #include <gtest/gtest.h>
 
+#include <QDataStream>
 #include <QTest>
 #include <gsl/pointers>
 
+#include "agent/agentbridge.h"
+#include "agent/agentplayer.h"
 #include "control/controlindicatortimer.h"
 #include "database/mixxxdb.h"
 #include "effects/effectsmanager.h"
@@ -139,6 +142,80 @@ class PlayerManagerTest : public MixxxDbTest, SoundSourceProviderRegistration {
     std::shared_ptr<RecordingManager> m_pRecordingManager;
     std::shared_ptr<Library> m_pLibrary;
 };
+
+TEST_F(PlayerManagerTest, AgentBridgeReadsAndWritesRealControls) {
+    mixxx::MixxxAgentPlayer player(m_pPlayerManager.get());
+    ASSERT_TRUE(player.available());
+    EXPECT_TRUE(player.setValue(0, QStringLiteral("crossfader"), 0.25));
+    EXPECT_TRUE(player.setValue(1, QStringLiteral("volume"), 0.6));
+    auto state = player.state();
+    EXPECT_DOUBLE_EQ(0.25, state.value(QStringLiteral("crossfader")).toDouble());
+    EXPECT_DOUBLE_EQ(0.6,
+            state.value(QStringLiteral("decks"))
+                    .toObject()
+                    .value(QStringLiteral("1"))
+                    .toObject()
+                    .value(QStringLiteral("volume"))
+                    .toDouble());
+    EXPECT_FALSE(player.setValue(1, QStringLiteral("not_a_control"), 1));
+}
+
+TEST_F(PlayerManagerTest, AgentBridgeLocalBackendIntegration) {
+    const auto configPath = qEnvironmentVariable("MIXXX_AGENT_BRIDGE_TEST_CONFIG");
+    const auto donePath = qEnvironmentVariable("MIXXX_AGENT_BRIDGE_TEST_DONE");
+    if (configPath.isEmpty() || donePath.isEmpty()) {
+        GTEST_SKIP() << "Run backend/tools/native_smoke.py to exercise the localhost backend";
+    }
+    QString error;
+    const auto config = mixxx::AgentBridgeConfig::fromFile(configPath, &error);
+    ASSERT_TRUE(config) << error.toStdString();
+    mixxx::AgentBridge bridge(
+            *config, std::make_unique<mixxx::MixxxAgentPlayer>(m_pPlayerManager.get()));
+    bridge.start();
+    QElapsedTimer timer;
+    timer.start();
+    while (!QFileInfo::exists(donePath) && timer.elapsed() < 70000) {
+        m_pEngine->process(1024);
+        QTest::qWait(10);
+    }
+    bridge.stop();
+    EXPECT_TRUE(QFileInfo::exists(donePath));
+}
+
+TEST_F(PlayerManagerTest, AgentBridgeWaitsForRealTrackLoad) {
+    mixxx::MixxxAgentPlayer player(m_pPlayerManager.get());
+    const auto location = getTestDataDir().filePath(QStringLiteral("agent-track.wav"));
+    QFile file(location);
+    ASSERT_TRUE(file.open(QIODevice::WriteOnly));
+    const quint32 dataSize = 44100 * 4;
+    QDataStream wave(&file);
+    wave.setByteOrder(QDataStream::LittleEndian);
+    wave.writeRawData("RIFF", 4);
+    wave << quint32(36 + dataSize);
+    wave.writeRawData("WAVEfmt ", 8);
+    wave << quint32(16) << quint16(1) << quint16(2) << quint32(44100) << quint32(44100 * 4)
+         << quint16(4) << quint16(16);
+    wave.writeRawData("data", 4);
+    wave << dataSize;
+    file.write(QByteArray(dataSize, '\0'));
+    file.close();
+    player.load(1, location);
+    QElapsedTimer timer;
+    timer.start();
+    while ((player.loading(1) || player.loadedPath(1).isEmpty()) && timer.elapsed() < 8000) {
+        m_pEngine->process(1024);
+        QTest::qWait(10);
+    }
+    EXPECT_FALSE(player.loading(1));
+    EXPECT_EQ(QFileInfo(location).canonicalFilePath(), player.loadedPath(1));
+    EXPECT_FALSE(player.state()
+                    .value(QStringLiteral("decks"))
+                    .toObject()
+                    .value(QStringLiteral("1"))
+                    .toObject()
+                    .value(QStringLiteral("playing"))
+                    .toBool());
+}
 
 TEST_F(PlayerManagerTest, UnEjectTest) {
     // Ejecting an empty deck with no previously-recorded ejected track has no effect.

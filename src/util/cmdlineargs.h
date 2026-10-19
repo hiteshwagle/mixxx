@@ -88,6 +88,9 @@ class CmdlineArgs final {
         }
     }
     const QString& getResourcePath() const { return m_resourcePath; }
+    const QString& getAgentBridgeConfig() const {
+        return m_agentBridgeConfig;
+    }
     const QString& getTimelinePath() const { return m_timelinePath; }
 
     const QString& getStyle() const {
@@ -136,6 +139,7 @@ class CmdlineArgs final {
     QString m_locale;
     QString m_settingsPath;
     QString m_resourcePath;
+    QString m_agentBridgeConfig;
     QString m_timelinePath;
     QString m_styleName;
 };

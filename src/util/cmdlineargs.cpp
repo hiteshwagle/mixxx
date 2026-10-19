@@ -215,6 +215,13 @@ bool CmdlineArgs::parse(const QStringList& arguments, CmdlineArgs::ParseMode mod
     parser.addOption(settingsPath);
     parser.addOption(settingsPathDeprecated);
 
+    const QCommandLineOption agentBridge(QStringLiteral("agent-bridge"),
+            forUserFeedback ? QCoreApplication::translate("CmdlineArgs",
+                                      "Enable the local agent bridge using this JSON configuration file")
+                            : QString(),
+            QStringLiteral("file"));
+    parser.addOption(agentBridge);
+
     QCommandLineOption resourcePath(QStringLiteral("resource-path"),
             forUserFeedback ? QCoreApplication::translate("CmdlineArgs",
                                       "Top-level directory where Mixxx should look for its "
@@ -463,6 +470,10 @@ bool CmdlineArgs::parse(const QStringList& arguments, CmdlineArgs::ParseMode mod
         m_resourcePath = parser.value(resourcePath);
     } else if (parser.isSet(resourcePathDeprecated)) {
         m_resourcePath = parser.value(resourcePathDeprecated);
+    }
+
+    if (parser.isSet(agentBridge)) {
+        m_agentBridgeConfig = parser.value(agentBridge);
     }
 
     if (parser.isSet(timelinePath)) {
